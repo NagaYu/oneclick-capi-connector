@@ -1,0 +1,75 @@
+{
+  "name": "oneclick-capi-connector",
+  "version": "1.0.0",
+  "description": "Zero-knowledge server-side conversion relay for Meta Conversions API (CAPI) and Google Enhanced Conversions. Fixes Safari/ITP tracking loss without ever persisting PII.",
+  "license": "MIT",
+  "author": "OneClick CAPI Connector Contributors",
+  "main": "dist/server/index.js",
+  "types": "dist/server/index.d.ts",
+  "homepage": "https://github.com/NagaYu/oneclick-capi-connector#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NagaYu/oneclick-capi-connector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NagaYu/oneclick-capi-connector/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:client": "tsc -p tsconfig.json --module es2022 --outDir dist/client-esm src/client/tracker.ts",
+    "start": "node dist/server/index.js",
+    "dev": "ts-node src/server/index.ts",
+    "dev:watch": "ts-node-dev --respawn --transpile-only src/server/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean"
+  },
+  "keywords": [
+    "conversions-api",
+    "capi",
+    "meta-pixel",
+    "facebook-capi",
+    "google-enhanced-conversions",
+    "server-side-tracking",
+    "itp",
+    "safari",
+    "shopify",
+    "woocommerce",
+    "martech",
+    "zero-knowledge",
+    "sha-256",
+    "roas"
+  ],
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.10",
+    "@types/supertest": "^6.0.2",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.10",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.4",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.4"
+  }
+}
