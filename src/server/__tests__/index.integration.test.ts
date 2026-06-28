@@ -221,6 +221,42 @@ describe("POST /api/events — all platforms fail (502)", () => {
   });
 });
 
+describe("DRY-RUN mode (no credentials needed)", () => {
+  it("accepts and hashes the event without calling any upstream API", async () => {
+    const config = makeConfig();
+    config.capi.dryRun = true;
+    // Simulate a credential-less deploy.
+    config.capi.meta.pixelId = "DRYRUN";
+    config.capi.meta.accessToken = "DRYRUN";
+    assembled = createApp(config);
+
+    const res = await request(assembled.app).post("/api/events").send(validBody());
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    const meta = res.body.results.find(
+      (r: { platform: string }) => r.platform === "meta"
+    );
+    expect(meta.ok).toBe(true);
+    expect(meta.message).toMatch(/DRY-RUN/);
+
+    // Crucially: no real network call was made.
+    expect(post).not.toHaveBeenCalled();
+    // And no raw PII leaked into the response.
+    expect(JSON.stringify(res.body)).not.toContain("customer@example.com");
+
+    await assembled.retryQueue.onIdle();
+  });
+
+  it("reports dry_run=true on /healthz", async () => {
+    const config = makeConfig();
+    config.capi.dryRun = true;
+    assembled = createApp(config);
+    const res = await request(assembled.app).get("/healthz");
+    expect(res.body.dry_run).toBe(true);
+  });
+});
+
 describe("unknown routes", () => {
   it("returns 404 with a JSON error", async () => {
     assembled = createApp(makeConfig());

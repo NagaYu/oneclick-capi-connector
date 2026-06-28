@@ -90,14 +90,23 @@ function loadConfig(): AppConfig {
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
 
+  // DRY-RUN: run the full hash/validate pipeline without sending upstream.
+  // In this mode platform credentials are optional, so the relay can boot and
+  // be verified end-to-end before any Meta/Google tokens are available.
+  const dryRun = boolEnv("DRY_RUN", false);
+
+  /** In dry-run, missing credentials are tolerated; otherwise they're required. */
+  const credEnv = (name: string): string =>
+    dryRun ? optionalEnv(name, "DRYRUN") : requireEnv(name);
+
   const metaEnabled = boolEnv("META_ENABLED", true);
   const googleEnabled = boolEnv("GOOGLE_ENABLED", false);
 
   const meta = metaEnabled
     ? {
         enabled: true,
-        pixelId: requireEnv("META_PIXEL_ID"),
-        accessToken: requireEnv("META_ACCESS_TOKEN"),
+        pixelId: credEnv("META_PIXEL_ID"),
+        accessToken: credEnv("META_ACCESS_TOKEN"),
         testEventCode: optionalEnv("META_TEST_EVENT_CODE") || undefined,
         apiVersion: optionalEnv("META_API_VERSION", "v21.0"),
       }
@@ -112,11 +121,11 @@ function loadConfig(): AppConfig {
   const google = googleEnabled
     ? {
         enabled: true,
-        accessToken: requireEnv("GOOGLE_ACCESS_TOKEN"),
-        developerToken: requireEnv("GOOGLE_DEVELOPER_TOKEN"),
-        customerId: requireEnv("GOOGLE_CUSTOMER_ID"),
+        accessToken: credEnv("GOOGLE_ACCESS_TOKEN"),
+        developerToken: credEnv("GOOGLE_DEVELOPER_TOKEN"),
+        customerId: credEnv("GOOGLE_CUSTOMER_ID"),
         loginCustomerId: optionalEnv("GOOGLE_LOGIN_CUSTOMER_ID") || undefined,
-        conversionActionResourceName: requireEnv(
+        conversionActionResourceName: credEnv(
           "GOOGLE_CONVERSION_ACTION_RESOURCE_NAME"
         ),
         apiVersion: optionalEnv("GOOGLE_API_VERSION", "v17"),
@@ -146,6 +155,7 @@ function loadConfig(): AppConfig {
       meta,
       google,
       requestTimeoutMs: Number.parseInt(optionalEnv("REQUEST_TIMEOUT_MS", "8000"), 10) || 8000,
+      dryRun,
     },
     retry: {
       maxAttempts: intEnv("RETRY_MAX_ATTEMPTS", 4),
@@ -392,6 +402,7 @@ export function createApp(config: AppConfig): AssembledApp {
   app.get("/healthz", (_req: Request, res: Response) => {
     res.status(200).json({
       status: "ok",
+      dry_run: config.capi.dryRun === true,
       meta_enabled: config.capi.meta.enabled,
       google_enabled: config.capi.google.enabled,
       time: new Date().toISOString(),

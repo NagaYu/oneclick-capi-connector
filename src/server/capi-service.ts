@@ -76,6 +76,12 @@ export interface CapiServiceConfig {
   google: GoogleConfig;
   /** Per-request timeout in milliseconds. Default 8000. */
   requestTimeoutMs?: number;
+  /**
+   * When true, the relay performs the full normalize→hash→validate pipeline but
+   * does NOT send to Meta/Google. Lets you deploy and verify end-to-end without
+   * any ad-platform credentials. Flip to false (and supply tokens) to go live.
+   */
+  dryRun?: boolean;
 }
 
 /** Outcome of a single platform dispatch. */
@@ -160,36 +166,39 @@ export class CapiService {
    * Runs platforms concurrently; one platform failing never blocks the other.
    */
   public async dispatch(event: ConversionEvent): Promise<DispatchSummary> {
-    const tasks: Array<Promise<DispatchResult>> = [];
-
-    if (this.config.meta.enabled) {
-      tasks.push(this.sendToMeta(event));
-    } else {
-      tasks.push(
-        Promise.resolve<DispatchResult>({
-          platform: "meta",
-          ok: false,
-          skipped: true,
-          message: "Meta dispatch disabled by configuration.",
-        })
-      );
-    }
-
-    if (this.config.google.enabled) {
-      tasks.push(this.sendToGoogle(event));
-    } else {
-      tasks.push(
-        Promise.resolve<DispatchResult>({
-          platform: "google",
-          ok: false,
-          skipped: true,
-          message: "Google dispatch disabled by configuration.",
-        })
-      );
-    }
-
-    const results = await Promise.all(tasks);
+    const results = await Promise.all([
+      this.dispatchToPlatform("meta", event),
+      this.dispatchToPlatform("google", event),
+    ]);
     return { eventId: event.eventId, results };
+  }
+
+  /**
+   * Produces a DRY-RUN result: the event was normalized, hashed, and validated,
+   * but intentionally NOT sent upstream. Logs only hash fingerprints (no PII).
+   */
+  private dryRunResult(
+    platform: "meta" | "google",
+    event: ConversionEvent
+  ): DispatchResult {
+    const phoneHash =
+      platform === "meta" ? event.user.phone_meta : event.user.phone_google;
+    // eslint-disable-next-line no-console
+    console.info(
+      `[CAPI:${platform}] DRY-RUN event_id=${event.eventId} (not sent) ` +
+        `em=${hashFingerprint(event.user.email)} ph=${hashFingerprint(phoneHash)}`
+    );
+    return {
+      platform,
+      ok: true,
+      skipped: false,
+      message: `DRY-RUN: hashed & validated, not dispatched to ${platform}.`,
+      details: {
+        dry_run: true,
+        email_hash: hashFingerprint(event.user.email),
+        phone_hash: hashFingerprint(phoneHash),
+      },
+    };
   }
 
   /**
@@ -213,6 +222,9 @@ export class CapiService {
           message: "Meta dispatch disabled by configuration.",
         };
       }
+      if (this.config.dryRun) {
+        return this.dryRunResult("meta", event);
+      }
       return this.sendToMeta(event);
     }
     if (!this.config.google.enabled) {
@@ -222,6 +234,9 @@ export class CapiService {
         skipped: true,
         message: "Google dispatch disabled by configuration.",
       };
+    }
+    if (this.config.dryRun) {
+      return this.dryRunResult("google", event);
     }
     return this.sendToGoogle(event);
   }

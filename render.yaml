@@ -25,12 +25,20 @@ services:
       - key: NODE_VERSION
         value: "20.18.0"
 
+      # DRY-RUN: deploy & verify the full hash/validate pipeline WITHOUT any ad
+      # platform credentials. The relay accepts events, normalizes + SHA-256
+      # hashes them, and returns a result — but does not send upstream.
+      # When you have a Meta Pixel ID + Access Token, set DRY_RUN=false and fill
+      # META_PIXEL_ID / META_ACCESS_TOKEN below to start sending real conversions.
+      - key: DRY_RUN
+        value: "true"
+
       # --- Meta Conversions API ---
       - key: META_ENABLED
         value: "true"
       - key: META_API_VERSION
         value: v21.0
-      # Required secrets — set these in the Render dashboard before first deploy.
+      # Secrets — OPTIONAL while DRY_RUN=true; REQUIRED once you set DRY_RUN=false.
       - key: META_PIXEL_ID
         sync: false
       - key: META_ACCESS_TOKEN
