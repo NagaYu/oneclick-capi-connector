@@ -10,6 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](#-license)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](#-tech-stack)
 [![Zero-Knowledge](https://img.shields.io/badge/PII-Zero--Knowledge-critical.svg)](#-zero-knowledge-architecture)
+[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7.svg)](https://render.com/deploy?repo=https://github.com/NagaYu/oneclick-capi-connector)
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg)](#-quick-start-deploy-in-60-seconds)
 
 </div>
@@ -151,7 +152,17 @@ curl http://localhost:8080/healthz
 
 ### 4. Deploy to the cloud (1‑click)
 
-Both platforms read your `.env` values from their dashboard's environment‑variable settings.
+Each platform reads your `.env` values from its dashboard's environment‑variable settings.
+
+**Render (recommended — runs the relay as a long‑lived process so the retry queue works fully)**
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/NagaYu/oneclick-capi-connector)
+
+1. Click the button above (or Render Dashboard → **New → Blueprint** → connect this repo). Render reads [`render.yaml`](render.yaml).
+2. Set the secret env vars when prompted: **`META_PIXEL_ID`** and **`META_ACCESS_TOKEN`** (required), plus optional `ALLOWED_ORIGINS` and `RELAY_SHARED_SECRET`.
+3. Click **Apply**. Render builds (`npm ci && npm run build`), starts (`npm start`), and health‑checks `/healthz`.
+
+> ⚠️ Set `META_PIXEL_ID` and `META_ACCESS_TOKEN` to real values **before** the first deploy — the server fails fast at boot if a required credential is missing.
 
 **Vercel**
 

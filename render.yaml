@@ -1,0 +1,72 @@
+# Render Blueprint — one-click deploy of the OneClick CAPI Connector relay.
+# Deploy: https://render.com/deploy?repo=https://github.com/NagaYu/oneclick-capi-connector
+#
+# This runs the Express relay as a long-lived web service so the in-memory
+# retry queue functions fully (unlike serverless platforms that freeze after
+# the response is sent). Render injects PORT automatically; the server reads it.
+#
+# Secret values (META_PIXEL_ID / META_ACCESS_TOKEN / ALLOWED_ORIGINS /
+# RELAY_SHARED_SECRET) are marked `sync: false` so you set them in the Render
+# dashboard — they are never committed to git.
+services:
+  - type: web
+    name: oneclick-capi-connector
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    numInstances: 1
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # Pin a modern Node runtime on Render.
+      - key: NODE_VERSION
+        value: "20.18.0"
+
+      # --- Meta Conversions API ---
+      - key: META_ENABLED
+        value: "true"
+      - key: META_API_VERSION
+        value: v21.0
+      # Required secrets — set these in the Render dashboard before first deploy.
+      - key: META_PIXEL_ID
+        sync: false
+      - key: META_ACCESS_TOKEN
+        sync: false
+      # Optional: Events Manager test code (leave unset in production).
+      - key: META_TEST_EVENT_CODE
+        sync: false
+
+      # --- Google Enhanced Conversions (disabled by default) ---
+      - key: GOOGLE_ENABLED
+        value: "false"
+      - key: GOOGLE_API_VERSION
+        value: v17
+
+      # --- Relay behaviour ---
+      - key: PHONE_COUNTRY_CODE
+        value: "81"
+      - key: REQUEST_TIMEOUT_MS
+        value: "8000"
+      # Comma-separated storefront origins for CORS (e.g. https://shop.example.com).
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Optional shared secret gate for POST /api/events.
+      - key: RELAY_SHARED_SECRET
+        sync: false
+
+      # --- Background retry queue ---
+      - key: RETRY_MAX_ATTEMPTS
+        value: "4"
+      - key: RETRY_BASE_DELAY_MS
+        value: "500"
+      - key: RETRY_MAX_DELAY_MS
+        value: "30000"
+      - key: RETRY_FACTOR
+        value: "2"
+      - key: RETRY_JITTER
+        value: "true"
+      - key: RETRY_CONCURRENCY
+        value: "8"
